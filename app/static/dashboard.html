@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>P-HE Simulation Plant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: #1f2937;
+            color: #fff;
+            padding: 14px 22px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        header .subtitle {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        main {
+            padding: 14px 22px;
+        }
+
+        .controls {
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .controls button {
+            padding: 5px 10px;
+            margin-right: 6px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn-start {
+            background: #10b981;
+            color: #fff;
+        }
+
+        .btn-stop {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .btn-refresh {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        .layout {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+            padding: 10px 12px;
+            flex: 1 1 320px;
+            font-size: 12px;
+        }
+
+        .card h2 {
+            margin: 0 0 4px 0;
+            font-size: 14px;
+        }
+
+        .card small {
+            color: #6b7280;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+            font-size: 12px;
+        }
+
+        th,
+        td {
+            padding: 4px 6px;
+            text-align: left;
+        }
+
+        th {
+            background: #e5e7eb;
+        }
+
+        tr:nth-child(even) {
+            background: #f9fafb;
+        }
+
+        .status-bar {
+            margin: 8px 0 10px 0;
+            font-size: 13px;
+        }
+
+        .status-bar span {
+            margin-right: 16px;
+        }
+
+        .alert {
+            display: inline-block;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        .Normal {
+            background: #ecfdf3;
+            color: #166534;
+        }
+
+        .Warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .Danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .inventory-table-container {
+            /* max-height: 260px; */
+            overflow-y: auto;
+        }
+
+        .events {
+            /* max-height: 140px; */
+            overflow-y: auto;
+            margin-top: 6px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 4px;
+        }
+
+        /* Order delay status colors */
+        .status-ON_TIME {
+            background: #ecfdf3;
+            color: #166534;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        .status-AT_RISK {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        .status-DELAYED {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        .status-NOT_PLANNED {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        .order-detail {
+            display: none;
+            margin-top: 8px;
+            padding: 8px;
+            background: #f9fafb;
+            border-left: 3px solid #3b82f6;
+            font-size: 11px;
+        }
+
+        .order-detail.show {
+            display: block;
+        }
+
+        .recommendation {
+            margin: 4px 0;
+            padding: 4px 6px;
+            background: #fff;
+            border-left: 2px solid #10b981;
+        }
+
+        .recommendation.priority-HIGH {
+            border-left-color: #ef4444;
+        }
+
+        .recommendation.priority-MEDIUM {
+            border-left-color: #f59e0b;
+        }
+
+        .clickable-row {
+            cursor: pointer;
+        }
+
+        .clickable-row:hover {
+            background: #f3f4f6 !important;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>P-HE Simulation Plant</h1>
+        <div class="subtitle">Synthetic data every second – simulation auto-starts on server startup.</div>
+    </header>
+    <main>
+        <div class="controls">
+            <button class="btn-start" onclick="startSim()">Start</button>
+            <button class="btn-stop" onclick="stopSim()">Stop</button>
+            <button class="btn-refresh" onclick="refreshAll()">Refresh</button>
+            <button id="btn-scenario1">Scenario 1: Demand Spike (500 P-HE)</button>
+            <button id="btn-scenario2">Scenario 2: Chip Delay +48h</button>
+            <span id="sim-status" style="margin-left:8px;">Simulation: auto-running</span>
+        </div>
+
+        <div class="status-bar" id="top-status"></div>
+
+        <div class="layout">
+            <div class="card">
+                <h2>Line Status</h2>
+                <small>Latest KPIs per assembly line</small>
+                <div class="card">
+                    <h2>Plant KPIs</h2>
+                    <table id="kpi-table">
+                        <thead>
+                            <tr>
+                                <th>KPI</th>
+                                <th>Value</th>
+                                <th>Target</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="line-cards"></div>
+            </div>
+
+
+
+            <div class="card" style="flex: 1;">
+                <h2>Orders & Plan (latest run)</h2>
+
+                <h3>Orders</h3>
+                <table id="orders-table">
+                    <thead>
+                        <tr>
+                            <th>Order</th>
+                            <th>Product</th>
+                            <th>Qty</th>
+                            <th>Start</th>
+                            <th>Dispatch</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <h3>Plan Items</h3>
+                <table id="plan-items-table">
+                    <thead>
+                        <tr>
+                            <th>Order</th>
+                            <th>Product</th>
+                            <th>Line</th>
+                            <th>Planned Qty</th>
+                            <th>Start</th>
+                            <th>End</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="card" style="flex: 1 1 100%;">
+                <h2>Order Delay Analysis</h2>
+                <small>"Given current capacity + inventory + supplier delays, this order will be late by X days"</small>
+                <table id="order-delays-table" style="margin-top: 10px;">
+                    <thead>
+                        <tr>
+                            <th>Order</th>
+                            <th>Product</th>
+                            <th>Qty</th>
+                            <th>Dispatch Date</th>
+                            <th>Planned Completion</th>
+                            <th>Delay (Days)</th>
+                            <th>Status</th>
+                            <th>Root Causes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>AI Recommendations</h2>
+                <small>Last decision for triggered scenario</small>
+                <div id="ai-decision-panel">
+                    <em>No AI decision yet.</em>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Events</h2>
+                <small>Recent planning, supply, and simulation events</small>
+                <div id="events-list" class="events"></div>
+            </div>
+
+
+            <div class="card">
+                <h2>Inventory Status (BOM materials)</h2>
+                <p>Required vs current, cost, and PO tracking</p>
+                <div class="inventory-table-container">
+                    <table id="inventory-table">
+                        <thead>
+                            <tr>
+                                <th>Mat</th>
+                                <th>Desc</th>
+                                <th>Required</th>
+                                <th>Consumed</th>
+                                <th>Current</th>
+                                <th>Seed</th>
+                                <th>Rem. Req.</th>
+                                <th>Unit Cost (INR)</th>
+                                <th>Total Cost (INR)</th>
+                                <th>PO Qty</th>
+                                <th>PO ETA</th>
+                                <th>PO Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        async function startSim() {
+            const res = await fetch('/start_simulation', { method: 'POST' });
+            const data = await res.json();
+            document.getElementById('sim-status').textContent = "Simulation: " + data.status;
+        }
+
+        async function stopSim() {
+            const res = await fetch('/stop_simulation', { method: 'POST' });
+            const data = await res.json();
+            document.getElementById('sim-status').textContent = "Simulation: " + data.status;
+        }
+
+        // -------- Realtime --------
+
+        async function refreshRealtime() {
+            const res = await fetch('/api/data/realtime');
+            const rows = await res.json();
+            renderRealtime(rows);
+        }
+
+        function renderRealtime(rows) {
+            const topStatus = document.getElementById('top-status');
+            const lineCardsDiv = document.getElementById('line-cards');
+
+            if (!rows || rows.length === 0) {
+                topStatus.textContent = "No realtime data yet.";
+                lineCardsDiv.innerHTML = "";
+                return;
+            }
+
+            // rows already contain one latest row per line
+            const latestGlobal = rows[0];
+            topStatus.innerHTML =
+                "<span><strong>Last update:</strong> " + new Date(latestGlobal.ts).toLocaleTimeString() + "</span>" +
+                "<span><strong>Demand:</strong> " + latestGlobal.demand_suvs + " SUVs</span>" +
+                "<span><strong>Global Inventory %:</strong> " + latestGlobal.inventory_status_pct.toFixed(2) + "%</span>";
+
+            document.getElementById('sim-status').textContent = "Simulation: running";
+
+            lineCardsDiv.innerHTML = "";
+            rows.forEach(r => {
+                const wrapper = document.createElement('div');
+                wrapper.style.borderBottom = "1px solid #e5e7eb";
+                wrapper.style.padding = "6px 0";
+
+                const alertClass = r.alert_status === "Normal" ? "Normal"
+                    : (r.alert_status.includes("Supply") ? "Danger" : "Warning");
+
+                wrapper.innerHTML = `
+          <div><strong>${r.assembly_line}</strong> (Shift: ${r.shift_id})</div>
+          <div>Output: <strong>${r.production_output_cum}</strong> SUVs</div>
+          <table>
+            <tr><td>Machine Uptime</td><td>${r.machine_uptime_pct.toFixed(2)}%</td></tr>
+            <tr><td>Worker Availability</td><td>${r.worker_availability_pct.toFixed(2)}%</td></tr>
+            <tr><td>Defect Rate</td><td>${r.defect_rate_pct.toFixed(2)}%</td></tr>
+            <tr><td>Energy Used</td><td>${r.energy_consumption_kwh_cum.toFixed(2)} kWh</td></tr>
+            <tr><td>Semiconductors</td><td>${r.semiconductor_availability}</td></tr>
+          </table>
+          <span class="alert ${alertClass}">${r.alert_status}</span>
+        `;
+                lineCardsDiv.appendChild(wrapper);
+            });
+        }
+
+        // -------- Inventory --------
+
+        async function refreshInventory() {
+            const res = await fetch("/api/data/inventory");
+            const data = await res.json();
+
+            const tbody = document.querySelector("#inventory-table tbody");
+            tbody.innerHTML = "";
+
+            data.forEach(row => {
+                const tr = document.createElement("tr");
+
+                function td(text) {
+                    const cell = document.createElement("td");
+                    cell.textContent = text;
+                    return cell;
+                }
+
+                tr.appendChild(td(row.material_id));
+                tr.appendChild(td(row.description));
+                tr.appendChild(td(row.required_for_order));
+                tr.appendChild(td(row.consumed_so_far));
+                tr.appendChild(td(row.current_stock));
+                tr.appendChild(td(row.seed_stock));
+                tr.appendChild(td(row.remaining_requirement));
+
+                // New per-unit cost column
+                tr.appendChild(td(
+                    row.unit_cost_inr != null ? row.unit_cost_inr : ""
+                ));
+
+                const cost = row.total_cost_remaining != null
+                    ? row.total_cost_remaining.toFixed(0)
+                    : "-";
+                tr.appendChild(td(cost));
+
+                tr.appendChild(td(row.po_quantity != null ? row.po_quantity : ""));
+                tr.appendChild(td(row.po_eta || ""));
+                tr.appendChild(td(row.po_status || ""));
+
+                tbody.appendChild(tr);
+            });
+        }
+
+
+        // -------- Orders + Plan --------
+
+        async function refreshOrdersAndPlan() {
+            const res = await fetch("/api/data/orders_plan");
+            const data = await res.json();
+
+            // --- Orders table ---
+            const ordersBody = document.querySelector("#orders-table tbody");
+            ordersBody.innerHTML = "";
+
+            (data.orders || []).forEach(o => {
+                const tr = document.createElement("tr");
+
+                function td(text) {
+                    const cell = document.createElement("td");
+                    cell.textContent = text;
+                    return cell;
+                }
+
+                tr.appendChild(td(o.order_id));
+                tr.appendChild(td(o.product_id));
+                tr.appendChild(td(o.quantity));
+                tr.appendChild(td(o.start_date.slice(0, 10)));
+                tr.appendChild(td(o.dispatch_date.slice(0, 10)));
+                tr.appendChild(td(o.status));
+
+                ordersBody.appendChild(tr);
+            });
+
+            // --- Plan items table ---
+            const planBody = document.querySelector("#plan-items-table tbody");
+            planBody.innerHTML = "";
+
+            (data.plan_items || []).forEach(p => {
+                const tr = document.createElement("tr");
+
+                function td(text) {
+                    const cell = document.createElement("td");
+                    cell.textContent = text;
+                    return cell;
+                }
+
+                tr.appendChild(td(p.order_id));
+                tr.appendChild(td(p.product_id));
+                tr.appendChild(td(p.line_id));
+                tr.appendChild(td(p.planned_qty));
+                tr.appendChild(td(p.start_ts ? p.start_ts.slice(0, 19).replace("T", " ") : ""));
+                tr.appendChild(td(p.end_ts ? p.end_ts.slice(0, 19).replace("T", " ") : ""));
+
+                planBody.appendChild(tr);
+            });
+        }
+
+        // -------- Events (optional) --------
+
+        async function refreshEvents() {
+            const res = await fetch("/api/data/events");
+            const events = await res.json();
+            renderEvents(events);
+        }
+
+        function renderEvents(events) {
+            const div = document.getElementById('events-list');
+            if (!div) return;  // guard if markup not present
+            div.innerHTML = "";
+            (events || []).forEach(e => {
+                const line = document.createElement('div');
+                const ts = e.event_date ? new Date(e.event_date).toLocaleTimeString() : "";
+                line.textContent = ts + " - " + e.event_type + ": " + e.description;
+                div.appendChild(line);
+            });
+        }
+
+        // -------- KPIs --------
+
+        async function refreshKpis() {
+            const res = await fetch("/api/kpi/latest");
+            const data = await res.json();
+
+            const tbody = document.querySelector("#kpi-table tbody");
+            if (!tbody) return;
+            tbody.innerHTML = "";
+
+            (data || []).forEach(kpi => {
+                const tr = document.createElement("tr");
+
+                const nameTd = document.createElement("td");
+                nameTd.textContent = kpi.name;
+
+                const valueTd = document.createElement("td");
+                valueTd.textContent = kpi.value.toFixed(2) + " " + (kpi.unit || "");
+
+                const targetTd = document.createElement("td");
+                targetTd.textContent = kpi.target != null ? kpi.target + " " + (kpi.unit || "") : "-";
+
+                const statusTd = document.createElement("td");
+                statusTd.textContent = kpi.alert_status;
+
+                tr.appendChild(nameTd);
+                tr.appendChild(valueTd);
+                tr.appendChild(targetTd);
+                tr.appendChild(statusTd);
+                tbody.appendChild(tr);
+            });
+        }
+
+        // -------- Scenarios --------
+
+        async function triggerScenarioDemandSpike() {
+            try {
+                const res = await fetch("/api/scenarios/demand_spike", { method: "POST" });
+                const data = await res.json();
+                alert("Demand spike scenario triggered. New order: " + data.order_id);
+                setTimeout(refreshAll, 1000);
+            } catch (e) {
+                console.error(e);
+                alert("Failed to trigger demand spike scenario");
+            }
+        }
+
+        async function triggerScenarioChipDelay() {
+            try {
+                const res = await fetch("/api/scenarios/chip_delay", { method: "POST" });
+                const data = await res.json();
+                if (data.status === "no_open_po_for_semiconductors") {
+                    alert("No open semiconductor PO to delay.");
+                } else {
+                    alert("Delayed PO " + data.po_id + " for " + data.material_id + " to " + data.new_eta);
+                }
+                setTimeout(refreshAll, 500);
+            } catch (e) {
+                const alertClass = r.alert_status === "Normal" ? "Normal"
+                    : (r.alert_status.includes("Supply") ? "Danger" : "Warning");
+
+                wrapper.innerHTML = `
+                    <div><strong>${r.assembly_line}</strong> (Shift: ${r.shift_id})</div>
+                    <div>Output: <strong>${r.production_output_cum}</strong> SUVs</div>
+                    <table>
+                        <tr><td>Machine Uptime</td><td>${r.machine_uptime_pct.toFixed(2)}%</td></tr>
+                        <tr><td>Worker Availability</td><td>${r.worker_availability_pct.toFixed(2)}%</td></tr>
+                        <tr><td>Defect Rate</td><td>${r.defect_rate_pct.toFixed(2)}%</td></tr>
+                        <tr><td>Energy Used</td><td>${r.energy_consumption_kwh_cum.toFixed(2)} kWh</td></tr>
+                        <tr><td>Semiconductors</td><td>${r.semiconductor_availability}</td></tr>
+                    </table>
+                    <span class="alert ${alertClass}">${r.alert_status}</span>`;
+                lineCardsDiv.appendChild(wrapper);
+            };
+        }
+
+        // -------- Inventory --------
+
+        async function refreshInventory() {
+            const res = await fetch("/api/data/inventory");
+            const data = await res.json();
+
+            const tbody = document.querySelector("#inventory-table tbody");
+            tbody.innerHTML = "";
+
+            data.forEach(row => {
+                const tr = document.createElement("tr");
+
+                function td(text) {
+                    const cell = document.createElement("td");
+                    cell.textContent = text;
+                    return cell;
+                }
+
+                tr.appendChild(td(row.material_id));
+                tr.appendChild(td(row.description));
+                tr.appendChild(td(row.required_for_order));
+                tr.appendChild(td(row.consumed_so_far));
+                tr.appendChild(td(row.current_stock));
+                tr.appendChild(td(row.seed_stock));
+                tr.appendChild(td(row.remaining_requirement));
+
+                // New per-unit cost column
+                tr.appendChild(td(
+                    row.unit_cost_inr != null ? row.unit_cost_inr : ""
+                ));
+
+                const cost = row.total_cost_remaining != null
+                    ? row.total_cost_remaining.toFixed(0)
+                    : "-";
+                tr.appendChild(td(cost));
+
+                tr.appendChild(td(row.po_quantity != null ? row.po_quantity : ""));
+                tr.appendChild(td(row.po_eta || ""));
+                tr.appendChild(td(row.po_status || ""));
+
+                tbody.appendChild(tr);
+            });
+        }
+
+
+        // -------- Orders + Plan --------
+
+        async function refreshOrdersAndPlan() {
+            const res = await fetch("/api/data/orders_plan");
+            const data = await res.json();
+
+            // --- Orders table ---
+            const ordersBody = document.querySelector("#orders-table tbody");
+            ordersBody.innerHTML = "";
+
+            (data.orders || []).forEach(o => {
+                const tr = document.createElement("tr");
+
+                function td(text) {
+                    const cell = document.createElement("td");
+                    cell.textContent = text;
+                    return cell;
+                }
+
+                tr.appendChild(td(o.order_id));
+                tr.appendChild(td(o.product_id));
+                tr.appendChild(td(o.quantity));
+                tr.appendChild(td(o.start_date.slice(0, 10)));
+                tr.appendChild(td(o.dispatch_date.slice(0, 10)));
+                tr.appendChild(td(o.status));
+
+                ordersBody.appendChild(tr);
+            });
+
+            // --- Plan items table ---
+            const planBody = document.querySelector("#plan-items-table tbody");
+            planBody.innerHTML = "";
+
+            (data.plan_items || []).forEach(p => {
+                const tr = document.createElement("tr");
+
+                function td(text) {
+                    const cell = document.createElement("td");
+                    cell.textContent = text;
+                    return cell;
+                }
+
+                tr.appendChild(td(p.order_id));
+                tr.appendChild(td(p.product_id));
+                tr.appendChild(td(p.line_id));
+                tr.appendChild(td(p.planned_qty));
+                tr.appendChild(td(p.start_ts ? p.start_ts.slice(0, 19).replace("T", " ") : ""));
+                tr.appendChild(td(p.end_ts ? p.end_ts.slice(0, 19).replace("T", " ") : ""));
+
+                planBody.appendChild(tr);
+            });
+        }
+
+        // -------- Events (optional) --------
+
+        async function refreshEvents() {
+            const res = await fetch("/api/data/events");
+            const events = await res.json();
+            renderEvents(events);
+        }
+
+        function renderEvents(events) {
+            const div = document.getElementById('events-list');
+            if (!div) return;  // guard if markup not present
+            div.innerHTML = "";
+            (events || []).forEach(e => {
+                const line = document.createElement('div');
+                const ts = e.event_date ? new Date(e.event_date).toLocaleTimeString() : "";
+                line.textContent = ts + " - " + e.event_type + ": " + e.description;
+                div.appendChild(line);
+            });
+        }
+
+        // -------- KPIs --------
+
+        async function refreshKpis() {
+            const res = await fetch("/api/kpi/latest");
+            const data = await res.json();
+
+            const tbody = document.querySelector("#kpi-table tbody");
+            if (!tbody) return;
+            tbody.innerHTML = "";
+
+            (data || []).forEach(kpi => {
+                const tr = document.createElement("tr");
+
+                const nameTd = document.createElement("td");
+                nameTd.textContent = kpi.name;
+
+                const valueTd = document.createElement("td");
+                valueTd.textContent = kpi.value.toFixed(2) + " " + (kpi.unit || "");
+
+                const targetTd = document.createElement("td");
+                targetTd.textContent = kpi.target != null ? kpi.target + " " + (kpi.unit || "") : "-";
+
+                const statusTd = document.createElement("td");
+                statusTd.textContent = kpi.alert_status;
+
+                tr.appendChild(nameTd);
+                tr.appendChild(valueTd);
+                tr.appendChild(targetTd);
+                tr.appendChild(statusTd);
+                tbody.appendChild(tr);
+            });
+        }
+
+        // -------- Scenarios --------
+
+        async function triggerScenarioDemandSpike() {
+            try {
+                const res = await fetch("/api/scenarios/demand_spike", { method: "POST" });
+                const data = await res.json();
+
+                if (data.ai_decision) {
+                    renderAiDecision(data.ai_decision, "Demand Spike");
+                    alert(
+                        "Demand spike scenario triggered.\n" +
+                        "New order: " + data.order_id + "\n\n" +
+                        "AI: " + data.ai_decision.ai_recommendation +
+                        " (Δ KPI " + data.ai_decision.predicted_kpi_impact_pct.toFixed(2) + "%)\n" +
+                        data.ai_decision.explanation
+                    );
+                } else {
+                    alert("Demand spike scenario triggered. New order: " + data.order_id);
+                }
+
+                setTimeout(refreshAll, 1000);
+            } catch (e) {
+                console.error(e);
+                alert("Failed to trigger demand spike scenario");
+            }
+        }
+
+        async function triggerScenarioChipDelay() {
+            try {
+                const res = await fetch("/api/scenarios/chip_delay", { method: "POST" });
+                const data = await res.json();
+
+                if (data.status === "no_open_po_for_semiconductors") {
+                    if (data.ai_decision) {
+                        renderAiDecision(data.ai_decision, "Chip Delay (no PO)");
+                        alert(
+                            "No open semiconductor PO to delay.\n\n" +
+                            "AI: " + data.ai_decision.ai_recommendation +
+                            " (Δ KPI " + data.ai_decision.predicted_kpi_impact_pct.toFixed(2) + "%)\n" +
+                            data.ai_decision.explanation
+                        );
+                    } else {
+                        alert("No open semiconductor PO to delay.");
+                    }
+                } else {
+                    if (data.ai_decision) {
+                        renderAiDecision(data.ai_decision, "Chip Delay");
+                        alert(
+                            "Delayed PO " + data.po_id + " for " + data.material_id +
+                            " to " + data.new_eta + ".\n\n" +
+                            "AI: " + data.ai_decision.ai_recommendation +
+                            " (Δ KPI " + data.ai_decision.predicted_kpi_impact_pct.toFixed(2) + "%)\n" +
+                            data.ai_decision.explanation
+                        );
+                    } else {
+                        alert(
+                            "Delayed PO " + data.po_id + " for " + data.material_id +
+                            " to " + data.new_eta
+                        );
+                    }
+                }
+
+                setTimeout(refreshAll, 500);
+            } catch (e) {
+                console.error(e);
+                alert("Failed to trigger chip delay scenario");
+            }
+        }
+
+
+        document.getElementById("btn-scenario1")
+            .addEventListener("click", triggerScenarioDemandSpike);
+
+        document.getElementById("btn-scenario2")
+            .addEventListener("click", triggerScenarioChipDelay);
+
+        // -------- Order Delays --------
+
+        async function refreshOrderDelays() {
+            const res = await fetch("/api/data/order_delays");
+            const data = await res.json();
+            renderOrderDelays(data);
+        }
+
+        function renderOrderDelays(delays) {
+            const tbody = document.querySelector("#order-delays-table tbody");
+            if (!tbody) return;
+            tbody.innerHTML = "";
+
+            (delays || []).forEach(order => {
+                const tr = document.createElement("tr");
+                tr.className = "clickable-row";
+                tr.dataset.orderId = order.order_id;
+
+                function td(text, className = "") {
+                    const cell = document.createElement("td");
+                    if (className) {
+                        const span = document.createElement("span");
+                        span.className = className;
+                        span.textContent = text;
+                        cell.appendChild(span);
+                    } else {
+                        cell.textContent = text;
+                    }
+                    return cell;
+                }
+
+                tr.appendChild(td(order.order_id));
+                tr.appendChild(td(order.product_id));
+                tr.appendChild(td(order.quantity));
+                tr.appendChild(td(order.dispatch_date ? order.dispatch_date.slice(0, 10) : ""));
+                tr.appendChild(td(order.planned_completion_date ? order.planned_completion_date.slice(0, 10) : "N/A"));
+
+                // Delay days with color coding
+                let delayText = order.delay_days !== null ? order.delay_days : "N/A";
+                if (order.delay_days > 0) {
+                    delayText = "+" + order.delay_days;
+                }
+                tr.appendChild(td(delayText));
+
+                // Status with color coding
+                tr.appendChild(td(order.status, `status-${order.status}`));
+
+                // Root causes
+                tr.appendChild(td(order.root_causes ? order.root_causes.join(", ") : ""));
+
+                // Actions button
+                const actionsCell = document.createElement("td");
+                const btn = document.createElement("button");
+                btn.textContent = "View";
+                btn.style.padding = "2px 6px";
+                btn.style.fontSize = "11px";
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleOrderDetail(order.order_id);
+                };
+                actionsCell.appendChild(btn);
+                tr.appendChild(actionsCell);
+
+                tbody.appendChild(tr);
+
+                // Add detail row (hidden by default)
+                const detailTr = document.createElement("tr");
+                detailTr.id = `detail-${order.order_id}`;
+                detailTr.style.display = "none";
+                const detailTd = document.createElement("td");
+                detailTd.colSpan = 9;
+                detailTd.innerHTML = `<div class="order-detail" id="detail-content-${order.order_id}">Loading...</div>`;
+                detailTr.appendChild(detailTd);
+                tbody.appendChild(detailTr);
+            });
+        }
+
+        async function toggleOrderDetail(orderId) {
+            const detailRow = document.getElementById(`detail-${orderId}`);
+            const detailContent = document.getElementById(`detail-content-${orderId}`);
+
+            if (detailRow.style.display === "none") {
+                // Show and load details
+                detailRow.style.display = "";
+
+                // Fetch recommendations
+                const res = await fetch(`/api/data/order_recommendations/${orderId}`);
+                const data = await res.json();
+
+                let html = `<h4>Order ${orderId} - Recommendations</h4>`;
+                html += `<p><strong>Status:</strong> ${data.status} | <strong>Delay:</strong> ${data.delay_days !== null ? data.delay_days + " days" : "N/A"}</p>`;
+
+                if (data.recommendations && data.recommendations.length > 0) {
+                    html += `<div style="margin-top: 8px;"><strong>Actionable Recommendations:</strong></div>`;
+                    data.recommendations.forEach(rec => {
+                        html += `
+                            <div class="recommendation priority-${rec.priority}">
+                                <strong>[${rec.priority}] ${rec.category}:</strong> ${rec.action}<br>
+                                <small>${rec.details}</small>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += `<p>No recommendations available.</p>`;
+                }
+
+                detailContent.innerHTML = html;
+            } else {
+                // Hide
+                detailRow.style.display = "none";
+            }
+        }
+
+        function renderAiDecision(decision, scenarioLabel) {
+            const panel = document.getElementById("ai-decision-panel");
+            if (!panel || !decision) return;
+
+            const alt = (decision.alternatives || [])
+                .map(a => `${a.action} (${(a.confidence * 100).toFixed(1)}%)`)
+                .join(", ");
+
+            panel.innerHTML = `
+                <div><strong>Scenario:</strong> ${scenarioLabel || decision.scenario_name}</div>
+                <div><strong>AI Recommendation:</strong> ${decision.ai_recommendation}</div>
+                <div><strong>Expected KPI Δ:</strong> ${decision.predicted_kpi_impact_pct.toFixed(2)} %</div>
+                <div><strong>Alert Status:</strong> ${decision.alert_status}</div>
+                <div><strong>Rules Fired:</strong> ${decision.rule_ids_fired}</div>
+                <div><strong>Explanation:</strong> ${decision.explanation}</div>
+                <div><strong>Alternatives:</strong> ${alt || "—"}</div>
+                <div style="margin-top:4px;font-size:11px;color:#6b7280;">
+                    run ${decision.run_id}, line scope ${decision.line_id}, at ${new Date(decision.ts).toLocaleTimeString()}
+                </div>
+            `;
+        }
+        // -------- Global refresh --------
+
+        async function refreshAll() {
+            await Promise.all([
+                refreshRealtime(),
+                refreshInventory(),
+                refreshOrdersAndPlan(),
+                refreshEvents(),
+                refreshKpis(),
+                refreshOrderDelays()
+            ]);
+        }
+
+        // initial kick
+        refreshAll();
+        setInterval(refreshAll, 1000);
+    </script>
+
+</body>
+
+</html>

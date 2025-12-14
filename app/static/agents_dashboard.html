@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Agent Control Center</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #f4f4f4; 
+            margin: 0; 
+            padding: 0; 
+            color: #333;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 600;
+        }
+        .header-status {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+            font-size: 13px;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Layout */
+        .layout { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 16px; 
+            padding: 16px; 
+        }
+        .card { 
+            background: #fff; 
+            border-radius: 8px; 
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1); 
+            padding: 16px 20px; 
+            flex: 1 1 300px;
+        }
+        .card-full { flex: 1 1 100%; }
+        .card h2 { 
+            margin: 0 0 12px 0; 
+            font-size: 16px; 
+            color: #1e3a5f;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card h2 .icon { font-size: 18px; }
+        
+        /* Tables */
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 12px; 
+        }
+        th, td { 
+            border-bottom: 1px solid #eee; 
+            padding: 8px 10px; 
+            text-align: left; 
+        }
+        th { 
+            background: #f8fafc; 
+            font-weight: 600; 
+            color: #475569;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tr:hover { background: #f8fafc; }
+        
+        /* Badges */
+        .badge { 
+            display: inline-block; 
+            padding: 3px 10px; 
+            border-radius: 999px; 
+            font-size: 11px; 
+            font-weight: 500;
+        }
+        .badge-green { background: #d1fae5; color: #065f46; }
+        .badge-red { background: #fee2e2; color: #b91c1c; }
+        .badge-yellow { background: #fef3c7; color: #92400e; }
+        .badge-blue { background: #dbeafe; color: #1e40af; }
+        .badge-purple { background: #ede9fe; color: #5b21b6; }
+        
+        /* Buttons */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .btn-secondary:hover { background: #cbd5e1; }
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        .btn-success:hover { background: #059669; }
+        
+        /* Control Panel */
+        .control-panel {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .status-message {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .status-message.success { background: #d1fae5; color: #065f46; }
+        .status-message.error { background: #fee2e2; color: #b91c1c; }
+        
+        /* Agent Graph */
+        .agent-graph {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            padding: 20px 0;
+            position: relative;
+        }
+        .agent-node {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s;
+        }
+        .agent-node:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .agent-node.orchestrator {
+            background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+            border-color: #a78bfa;
+        }
+        .agent-node.planning {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border-color: #60a5fa;
+        }
+        .agent-node.supply {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border-color: #34d399;
+        }
+        .agent-node.maintenance {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-color: #fbbf24;
+        }
+        .agent-node .agent-icon { font-size: 28px; margin-bottom: 8px; }
+        .agent-node .agent-name { font-weight: 600; font-size: 13px; color: #1e293b; }
+        .agent-node .agent-role { font-size: 11px; color: #64748b; margin-top: 4px; }
+        .agent-node .agent-status { margin-top: 8px; }
+        
+        /* Relationship Lines */
+        .relationships {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .rel-item {
+            font-size: 11px;
+            background: #f1f5f9;
+            padding: 4px 10px;
+            border-radius: 4px;
+            color: #475569;
+        }
+        .rel-item .arrow { color: #94a3b8; margin: 0 4px; }
+        
+        /* Decision Details */
+        .decision-details {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 12px;
+            display: none;
+        }
+        .decision-details.show { display: block; }
+        .decision-details h4 { margin: 0 0 8px 0; font-size: 13px; }
+        .decision-details p { margin: 4px 0; color: #475569; }
+        .decision-details .label { font-weight: 600; color: #1e293b; }
+        
+        /* Timeline */
+        .timeline-item {
+            display: flex;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .timeline-item:last-child { border-bottom: none; }
+        .timeline-time {
+            font-size: 11px;
+            color: #64748b;
+            min-width: 70px;
+        }
+        .timeline-type {
+            font-size: 11px;
+            font-weight: 600;
+            color: #1e3a5f;
+            min-width: 140px;
+        }
+        .timeline-desc {
+            font-size: 11px;
+            color: #475569;
+            flex: 1;
+        }
+        
+        /* Loading */
+        .loading {
+            color: #94a3b8;
+            font-style: italic;
+            font-size: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        /* Clickable row */
+        .clickable-row { cursor: pointer; }
+        .clickable-row:hover { background: #eff6ff !important; }
+        
+        /* KPI Change */
+        .kpi-positive { color: #059669; font-weight: 600; }
+        .kpi-negative { color: #dc2626; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>🤖 Multi-Agent Control Center</h1>
+        <div class="header-status">
+            <div class="status-item">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="agentCount">Agents: -- / 4 running</span>
+            </div>
+            <div class="status-item">
+                <span>Last refresh: <span id="lastRefresh">--</span></span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="layout">
+        <!-- Control Panel -->
+        <div class="card card-full">
+            <h2><span class="icon">⚙️</span> Control Panel</h2>
+            <div class="control-panel">
+                <button class="btn btn-success" onclick="startAllAgents()">▶ Start All Agents</button>
+                <button class="btn btn-secondary" onclick="refreshAll()">🔄 Refresh Now</button>
+                <button class="btn btn-secondary" onclick="toggleDryRun()">🧪 Toggle Dry-Run</button>
+                <span id="controlMessage" class="status-message" style="display:none;"></span>
+                <span id="dryRunStatus" class="badge badge-yellow" style="display:none;">Dry-Run Mode</span>
+            </div>
+            <div id="errorArea" style="color:#b91c1c; font-size:12px; margin-top:8px;"></div>
+        </div>
+        
+        <!-- Agent Status -->
+        <div class="card" style="flex: 1 1 55%;">
+            <h2><span class="icon">📊</span> Agent Status</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Agent</th>
+                        <th>Role</th>
+                        <th>Interval</th>
+                        <th>Running</th>
+                        <th>Last Run</th>
+                        <th>Last Error</th>
+                    </tr>
+                </thead>
+                <tbody id="agentStatusBody">
+                    <tr><td colspan="6" class="loading">Loading agents...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Inter-Agent Interaction -->
+        <div class="card" style="flex: 1 1 40%;">
+            <h2><span class="icon">🔗</span> Agent Interactions</h2>
+            <div class="agent-graph">
+                <div class="agent-node orchestrator">
+                    <div class="agent-icon">🎯</div>
+                    <div class="agent-name">Orchestrator</div>
+                    <div class="agent-role">Coordinator</div>
+                    <div class="agent-status">
+                        <span class="badge badge-purple" id="statusOrchestrator">--</span>
+                    </div>
+                </div>
+                <div class="agent-node planning">
+                    <div class="agent-icon">📋</div>
+                    <div class="agent-name">Planning</div>
+                    <div class="agent-role">Scheduler</div>
+                    <div class="agent-status">
+                        <span class="badge badge-blue" id="statusPlanning">--</span>
+                    </div>
+                </div>
+                <div class="agent-node supply">
+                    <div class="agent-icon">📦</div>
+                    <div class="agent-name">Supply Chain</div>
+                    <div class="agent-role">Inventory & PO</div>
+                    <div class="agent-status">
+                        <span class="badge badge-green" id="statusSupply">--</span>
+                    </div>
+                </div>
+                <div class="agent-node maintenance">
+                    <div class="agent-icon">🔧</div>
+                    <div class="agent-name">Maintenance</div>
+                    <div class="agent-role">Machine Health</div>
+                    <div class="agent-status">
+                        <span class="badge badge-yellow" id="statusMaintenance">--</span>
+                    </div>
+                </div>
+            </div>
+            <div class="relationships">
+                <div class="rel-item">🎯 Orchestrator <span class="arrow">→</span> All Agents (coordinates)</div>
+                <div class="rel-item">📋 Planning <span class="arrow">↔</span> 📦 Supply (needs materials)</div>
+                <div class="rel-item">📋 Planning <span class="arrow">↔</span> 🔧 Maintenance (needs capacity)</div>
+            </div>
+        </div>
+        
+        <!-- Recent Decisions -->
+        <div class="card card-full">
+            <h2><span class="icon">🧠</span> Recent AI / Agent Decisions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Agent</th>
+                        <th>Action</th>
+                        <th>Target</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="decisionsBody">
+                    <tr><td colspan="6" class="loading">Loading decisions...</td></tr>
+                </tbody>
+            </table>
+            <div id="decisionDetails" class="decision-details">
+                <h4>Decision Details</h4>
+                <p><span class="label">Explanation:</span> <span id="detailExplanation">-</span></p>
+                <p><span class="label">Run ID:</span> <span id="detailRunId">-</span></p>
+                <p><span class="label">LLM Used:</span> <span id="detailLLM">-</span></p>
+            </div>
+        </div>
+        
+        <!-- Event Timeline -->
+        <div class="card" style="flex: 1 1 45%;">
+            <h2><span class="icon">📜</span> Event Timeline</h2>
+            <div id="eventTimeline">
+                <div class="loading">Loading events...</div>
+            </div>
+        </div>
+        
+        <!-- Pending Actions -->
+        <div class="card" style="flex: 1 1 45%;">
+            <h2><span class="icon">⏳</span> Pending Actions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Agent</th>
+                        <th>Action</th>
+                        <th>Priority</th>
+                        <th>Target</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="pendingBody">
+                    <tr><td colspan="5" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        // Configuration
+        const REFRESH_INTERVAL = 5000;
+        
+        // Role mapping
+        const ROLE_MAP = {
+            'planning': { name: 'Planning Agent', icon: '📋' },
+            'supply_chain': { name: 'Supply Chain Agent', icon: '📦' },
+            'maintenance': { name: 'Maintenance Agent', icon: '🔧' },
+            'orchestrator': { name: 'Orchestrator Agent', icon: '🎯' }
+        };
+        
+        // State
+        let selectedDecision = null;
+        let dryRunEnabled = false;
+        
+        // Utility functions
+        function formatTime(isoString) {
+            if (!isoString) return '--';
+            const d = new Date(isoString);
+            return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+        
+        function formatTimeAgo(isoString) {
+            if (!isoString) return '--';
+            const d = new Date(isoString);
+            const now = new Date();
+            const diffSec = Math.floor((now - d) / 1000);
+            if (diffSec < 60) return `${diffSec}s ago`;
+            if (diffSec < 3600) return `${Math.floor(diffSec/60)}m ago`;
+            return `${Math.floor(diffSec/3600)}h ago`;
+        }
+        
+        function showMessage(text, isError = false) {
+            const el = document.getElementById('controlMessage');
+            el.textContent = text;
+            el.className = `status-message ${isError ? 'error' : 'success'}`;
+            el.style.display = 'inline';
+            setTimeout(() => { el.style.display = 'none'; }, 3000);
+        }
+        
+        function showError(text) {
+            document.getElementById('errorArea').textContent = text;
+            setTimeout(() => { document.getElementById('errorArea').textContent = ''; }, 5000);
+        }
+        
+        // API calls
+        async function fetchJSON(url) {
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
+            } catch (e) {
+                console.error(`Failed to fetch ${url}:`, e);
+                throw e;
+            }
+        }
+        
+        async function postJSON(url, body = {}) {
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
+            } catch (e) {
+                console.error(`Failed to POST ${url}:`, e);
+                throw e;
+            }
+        }
+        
+        // Refresh functions
+        async function refreshAgents() {
+            try {
+                const data = await fetchJSON('/api/agent/status');
+                const agents = data.agents || {};
+                
+                let runningCount = 0;
+                const tbody = document.getElementById('agentStatusBody');
+                let html = '';
+                
+                for (const [name, agent] of Object.entries(agents)) {
+                    const role = ROLE_MAP[name] || { name: name, icon: '🤖' };
+                    const isRunning = agent.is_running;
+                    if (isRunning) runningCount++;
+                    
+                    const lastRun = agent.last_cycle_at ? formatTimeAgo(agent.last_cycle_at) : '--';
+                    const lastError = agent.last_error || '--';
+                    
+                    html += `
+                        <tr>
+                            <td>${role.icon} ${name}</td>
+                            <td>${role.name}</td>
+                            <td>${agent.cycle_count || 0} cycles</td>
+                            <td><span class="badge ${isRunning ? 'badge-green' : 'badge-red'}">${isRunning ? 'Running' : 'Stopped'}</span></td>
+                            <td>${lastRun}</td>
+                            <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;">${lastError}</td>
+                        </tr>
+                    `;
+                    
+                    // Update mini status in graph
+                    const statusEl = document.getElementById(`status${name.charAt(0).toUpperCase() + name.slice(1).replace('_', '')}`);
+                    if (statusEl) {
+                        statusEl.textContent = isRunning ? 'Active' : 'Idle';
+                    }
+                }
+                
+                if (!html) html = '<tr><td colspan="6" class="loading">No agents registered</td></tr>';
+                tbody.innerHTML = html;
+                
+                // Update header
+                const total = Object.keys(agents).length || 4;
+                document.getElementById('agentCount').textContent = `Agents: ${runningCount} / ${total} running`;
+                document.getElementById('statusDot').style.background = runningCount > 0 ? '#4ade80' : '#f87171';
+                
+            } catch (e) {
+                showError('Failed to load agent status');
+            }
+        }
+        
+        async function refreshDecisions() {
+            try {
+                const data = await fetchJSON('/api/agent/decisions');
+                const decisions = data || [];
+                
+                const tbody = document.getElementById('decisionsBody');
+                let html = '';
+                
+                if (decisions.length === 0) {
+                    html = '<tr><td colspan="6" class="loading">No decisions yet</td></tr>';
+                } else {
+                    decisions.slice(0, 15).forEach((d, idx) => {
+                        const decision = d.decision || {};
+                        const action = decision.action || '--';
+                        const reason = decision.reason || '--';
+                        const llmUsed = decision.llm_used ? 'LLM' : 'Rule';
+                        
+                        html += `
+                            <tr class="clickable-row" onclick="showDecisionDetails(${idx})">
+                                <td>${formatTime(d.timestamp)}</td>
+                                <td>${d.agent || '--'}</td>
+                                <td><span class="badge badge-blue">${action}</span></td>
+                                <td>${decision.affected_items ? decision.affected_items.join(', ') : '--'}</td>
+                                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${reason}</td>
+                                <td><span class="badge ${decision.llm_used ? 'badge-purple' : 'badge-green'}">${llmUsed}</span></td>
+                            </tr>
+                        `;
+                    });
+                }
+                
+                tbody.innerHTML = html;
+                window._decisions = decisions;
+                
+            } catch (e) {
+                showError('Failed to load decisions');
+            }
+        }
+        
+        async function refreshEvents() {
+            try {
+                const events = await fetchJSON('/api/data/events');
+                const container = document.getElementById('eventTimeline');
+                
+                if (!events || events.length === 0) {
+                    container.innerHTML = '<div class="loading">No events yet</div>';
+                    return;
+                }
+                
+                let html = '';
+                events.slice(0, 10).forEach(e => {
+                    html += `
+                        <div class="timeline-item">
+                            <span class="timeline-time">${formatTime(e.event_date)}</span>
+                            <span class="timeline-type">${e.event_type}</span>
+                            <span class="timeline-desc">${e.description || ''}</span>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+                
+            } catch (e) {
+                console.error('Failed to load events:', e);
+            }
+        }
+        
+        async function refreshPending() {
+            try {
+                const data = await fetchJSON('/api/agent/pending-actions');
+                const actions = data.actions || [];
+                
+                const tbody = document.getElementById('pendingBody');
+                let html = '';
+                
+                if (actions.length === 0) {
+                    html = '<tr><td colspan="5" class="loading">No pending actions</td></tr>';
+                } else {
+                    actions.forEach(a => {
+                        const target = a.material_id || a.line_id || a.order_id || '--';
+                        const priorityBadge = a.priority >= 4 ? 'badge-red' : a.priority >= 3 ? 'badge-yellow' : 'badge-green';
+                        
+                        html += `
+                            <tr>
+                                <td>${a.agent}</td>
+                                <td>${a.action_type}</td>
+                                <td><span class="badge ${priorityBadge}">${a.priority}</span></td>
+                                <td>${target}</td>
+                                <td><span class="badge badge-blue">${a.status}</span></td>
+                            </tr>
+                        `;
+                    });
+                }
+                
+                tbody.innerHTML = html;
+                
+            } catch (e) {
+                console.error('Failed to load pending actions:', e);
+            }
+        }
+        
+        async function refreshConfig() {
+            try {
+                const data = await fetchJSON('/api/agent/config');
+                dryRunEnabled = data.dry_run;
+                const el = document.getElementById('dryRunStatus');
+                el.style.display = dryRunEnabled ? 'inline' : 'none';
+            } catch (e) {
+                console.error('Failed to load config:', e);
+            }
+        }
+        
+        async function refreshAll() {
+            const now = new Date();
+            document.getElementById('lastRefresh').textContent = now.toLocaleTimeString();
+            
+            await Promise.all([
+                refreshAgents(),
+                refreshDecisions(),
+                refreshEvents(),
+                refreshPending(),
+                refreshConfig()
+            ]);
+        }
+        
+        // Actions
+        async function startAllAgents() {
+            try {
+                const result = await postJSON('/api/agent/start-all');
+                showMessage('All agents started successfully!');
+                await refreshAgents();
+            } catch (e) {
+                showMessage('Failed to start agents', true);
+            }
+        }
+        
+        async function toggleDryRun() {
+            try {
+                const newValue = !dryRunEnabled;
+                await postJSON(`/api/agent/config/dry-run?enabled=${newValue}`);
+                dryRunEnabled = newValue;
+                showMessage(newValue ? 'Dry-run mode enabled' : 'Dry-run mode disabled');
+                await refreshConfig();
+            } catch (e) {
+                showMessage('Failed to toggle dry-run', true);
+            }
+        }
+        
+        function showDecisionDetails(idx) {
+            const decisions = window._decisions || [];
+            if (idx >= decisions.length) return;
+            
+            const d = decisions[idx];
+            const decision = d.decision || {};
+            
+            document.getElementById('detailExplanation').textContent = decision.reason || decision.explanation || '--';
+            document.getElementById('detailRunId').textContent = d.cycle || '--';
+            document.getElementById('detailLLM').textContent = decision.llm_used ? 'Yes' : 'No (Rule-based)';
+            
+            document.getElementById('decisionDetails').classList.add('show');
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshAll();
+            setInterval(refreshAll, REFRESH_INTERVAL);
+        });
+    </script>
+</body>
+</html>

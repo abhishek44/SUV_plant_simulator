@@ -1,0 +1,49 @@
+{
+  "source_csv": "C:\\Users\\337825\\Downloads\\Hackathon\\data\\train_s1.csv",
+  "model_versions": {
+    "action_classifier": "rf-1.0",
+    "kpi_regressor": "rf-1.0"
+  },
+  "metrics": {
+    "clf": {
+      "accuracy": 0.16875,
+      "f1_weighted": 0.1654318204337712
+    },
+    "reg": {
+      "mae": 2.9038995833333336,
+      "r2": 0.8572707120389426
+    }
+  },
+  "feature_columns": [
+    "Scenario_encoded",
+    "Assembly_Line_encoded",
+    "Shift_encoded",
+    "Semiconductor_Availability_encoded",
+    "Alert_Status_encoded",
+    "Demand_SUVs",
+    "Inventory_Status_%",
+    "Machine_Uptime_%",
+    "Worker_Availability_%",
+    "Production_Output",
+    "Defect_Rate_%",
+    "Energy_Consumption_kWh",
+    "Hour",
+    "DayOfWeek"
+  ],
+  "categoricals": [
+    "Scenario",
+    "Assembly_Line",
+    "Shift",
+    "Semiconductor_Availability",
+    "Alert_Status"
+  ],
+  "numericals": [
+    "Demand_SUVs",
+    "Inventory_Status_%",
+    "Machine_Uptime_%",
+    "Worker_Availability_%",
+    "Production_Output",
+    "Defect_Rate_%",
+    "Energy_Consumption_kWh"
+  ]
+}
